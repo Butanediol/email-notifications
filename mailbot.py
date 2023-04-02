@@ -2,6 +2,8 @@ import imaplib
 import re
 import email.header
 import requests
+import json
+import urllib.parse
 
 class Mailbox:
   def __init__(self, mail, mailbox, password, folder = 'Inbox'):
@@ -43,6 +45,8 @@ class Mailbox:
         # An easier way to get sender and subject is to use mail.parser.Parser
         mail['sender'] = self.__extractMailData(text, '\r\nFrom: (.*?)\r\n[\w]')
         mail['subject'] = self.__extractMailData(text, '\r\nSubject: (.*?)\r\n[\w]')
+        mail['to'] = self.__extractMailData(text, '\r\nTo: (.*?)\r\n[\w]')
+        mail['text'] = text
         mails.append(mail)
     
     if len(uids) > 0:
@@ -94,3 +98,32 @@ class TgSender:
       requests.post(self.__sendMessageUrl, data=data)
     except:
       print('Failed to send notification. Check the availability of Telegram servers (for example, Telegram website) from place where the script is running')
+
+class BarkSender:
+
+  def __init__(self, token, baseUrl="https://api.day.app"):
+    if not token:
+      raise Exception('Each parameter must not be empty') 
+    self.__deviceToken = token
+    self.__sendMessageUrl = baseUrl + '/' + token
+    
+  def send(self, title: str, content: str):
+    try:
+      response = requests.post(
+        url=self.__sendMessageUrl,
+        headers={
+            "Content-Type": "application/json; charset=utf-8",
+        },
+        data=json.dumps({
+            "body": content,
+            "group": "Email",
+            "title": title,
+            "badge": ""
+        }),
+        )
+      print('Response HTTP Status Code: {status_code}'.format(
+          status_code=response.status_code))
+      print('Response HTTP Response Body: {content}'.format(
+          content=response.content))
+    except requests.exceptions.RequestException:
+      print('HTTP Request failed')
