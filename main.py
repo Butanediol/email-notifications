@@ -19,9 +19,6 @@ while(1):
   emails = mailbox.getUnseenMails(False)
 
   for email in emails:
-    # Get sender email address
-    sender_email = email['From'].split('<')[1].split('>')[0]
-
     # Get body
     body = ''
     for part in email.walk():
@@ -32,7 +29,7 @@ while(1):
     # Get Subject
     subject = email['Subject']
 
-    data = str(sender_email) + '\n\n' + str(subject) + '\n\n' + str(body)
+    data = str(email['From']) + '\n\n' + str(subject) + '\n\n' + str(body)
     telegram.send(data)
     bark.send(title=str(email['To']), content=str(body))
 
