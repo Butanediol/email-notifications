@@ -11,7 +11,7 @@ mailFolder   = os.environ['IMAP_MAIL_FOLDER']
 barkToken    = os.environ['BARK_TOKEN']
 
 mailbox = mailbot.Mailbox(mailServer, mailAddress, mailPassword, mailFolder)
-sender  = mailbot.TgSender(tgApiToken, chatId)
+telegram= mailbot.TgSender(tgApiToken, chatId)
 bark    = mailbot.BarkSender(token=barkToken)
 
 print('Start checking..')
@@ -19,11 +19,21 @@ while(1):
   emails = mailbox.getUnseenMails(False)
 
   for email in emails:
-    data = str(email['sender']) + '\n\n' + str(email['subject'])
-    print(data)
-    sender.send(data)
-    bark.send(title=str(email['to']), content=str(email['subject']))
+    # Get sender email address
+    sender_email = email['From'].split('<')[1].split('>')[0]
+
+    # Get body
+    body = ''
+    for part in email.walk():
+      if part.get_content_type() == 'text/plain':
+        body = part.get_payload(decode=True).decode()
+        break
+
+    # Get Subject
+    subject = email['Subject']
+
+    data = str(sender_email) + '\n\n' + str(subject) + '\n\n' + str(body)
+    telegram.send(data)
+    bark.send(title=str(email['To']), content=str(body))
 
   time.sleep(30)
-    
-    
