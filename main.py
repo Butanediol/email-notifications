@@ -26,9 +26,9 @@ while (1):
         body = helpers.getEmailBody(email)
 
         # Get Subject
-        subject = email['Subject']
+        subject = helpers.decodeMailSubject(str(email['Subject']))
 
-        data = str(sender_email) + '\n\n' + str(subject) + '\n\n' + str(body)
+        data = str(sender_email) + '\n' + subject + '\n' + str(body)
         telegram.send(data)
         bark.send(title=str(email['To']), content=str(body))
 
