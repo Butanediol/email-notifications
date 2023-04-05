@@ -29,3 +29,11 @@ def decodeMailSubject(subject: str):
     except (ValueError, UnicodeDecodeError):
         # Return the original subject line if decoding failed
         return subject
+
+def getEmailSender(message: Message) -> str:
+    # Get sender email address
+    try:
+        sender_email = message['From'].split('<')[1].split('>')[0]
+    except IndexError:
+        sender_email = message['From']
+    return sender_email

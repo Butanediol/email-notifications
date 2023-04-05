@@ -21,15 +21,15 @@ while (1):
 
     for email in emails:
         # Get sender email address
-        sender_email = email['From'].split('<')[1].split('>')[0]
+        sender_email = helpers.getEmailSender(email)
 
         body = helpers.getEmailBody(email)
 
         # Get Subject
         subject = helpers.decodeMailSubject(str(email['Subject']))
 
-        data = str(sender_email) + '\n' + subject + '\n' + str(body)
+        data = 'From: ' + sender_email + '\n' + subject + '\n' + body
         telegram.send(data)
-        bark.send(title=str(email['To']), content=str(body))
+        bark.send(title='From: ' + sender_email, content=subject)
 
     time.sleep(30)
