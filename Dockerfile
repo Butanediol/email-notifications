@@ -4,4 +4,5 @@ WORKDIR /app
 COPY . .
 RUN pip install requests
 
+ENV PYTHONUNBUFFERED=1
 CMD python main.py
