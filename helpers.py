@@ -1,4 +1,5 @@
 from email.message import Message
+from email.header import decode_header
 import base64
 
 
@@ -18,16 +19,11 @@ def getEmailBody(message: Message, trimmed: bool = True) -> str:
         body = body[:1000] + '...'
     return body
 
-def decodeMailSubject(subject: str):
+def decodeMailSubject(subject: str) -> str:
     try:
-        # Split the string into its components and extract the encoding method and text
-        charset, encoding, encoded_text = subject.split('?')[1:4]
-        # Decode the Base64-encoded text using the specified character set
-        decoded_bytes = base64.b64decode(encoded_text)
-        decoded_text = decoded_bytes.decode(charset)
-        return decoded_text
-    except (ValueError, UnicodeDecodeError):
-        # Return the original subject line if decoding failed
+        subjects = [subj[0].decode(subj[1]) for subj in decode_header(subject)]
+        return ' '.join(subjects)
+    except AttributeError:
         return subject
 
 def getEmailSender(message: Message) -> str:
