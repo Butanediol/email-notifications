@@ -73,7 +73,7 @@ class Mailbox:
       self.__imap.select(self.folder)
 
       # Get all unseen mail UIDs.
-      _, uids = self.__imap.uid('SEARCH', "UNSEEN")
+      _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
     except:
       return []
