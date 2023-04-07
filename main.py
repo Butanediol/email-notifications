@@ -20,12 +20,13 @@ while (1):
     emails = mailbox.getUnseenMails(False)
 
     for email in emails:
-        sender_email = helpers.getEmailSender(email)
+        sender_address = helpers.getEmailAddress(email['From'])
+        receiver_address = helpers.getEmailAddress(email['To'])
         body = helpers.getEmailBody(email)
         subject = helpers.decodeMailSubject(email['Subject'])
 
-        data = 'From: ' + sender_email + '\n\n' + subject + '\n\n' + body
+        data = sender_address + ' -> ' + receiver_address + '\n\n' + subject + '\n\n' + body
         telegram.send(data)
-        bark.send(title='From: ' + sender_email, content=subject)
+        bark.send(title='From: ' + sender_address, content=subject)
 
     time.sleep(30)

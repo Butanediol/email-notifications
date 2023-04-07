@@ -1,6 +1,5 @@
 from email.message import Message
 from email.header import decode_header
-import base64
 
 
 def getEmailBody(message: Message, trimmed: bool = True) -> str:
@@ -26,10 +25,10 @@ def decodeMailSubject(subject: str) -> str:
     except AttributeError:
         return subject
 
-def getEmailSender(message: Message) -> str:
+def getEmailAddress(address: str) -> str:
     # Get sender email address
     try:
-        sender_email = message['From'].split('<')[1].split('>')[0]
+        sender_email = address.split('<')[1].split('>')[0]
     except IndexError:
-        sender_email = message['From']
+        sender_email = address
     return sender_email
