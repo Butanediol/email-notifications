@@ -1,5 +1,6 @@
 from email.message import Message
 from email.header import decode_header
+from bs4 import BeautifulSoup
 
 
 def getEmailBody(message: Message, trimmed: bool = True) -> str:
@@ -7,8 +8,10 @@ def getEmailBody(message: Message, trimmed: bool = True) -> str:
     body = ''
     for part in message.walk():
         if part.get_content_type() == 'text/plain':
-            body = part.get_payload(decode=True).decode()
+            body += part.get_payload(decode=True).decode() + '\n'
             break
+        elif part.get_content_type() == 'text/html':
+            body += BeautifulSoup(part.get_payload(), 'html.parser').text
 
     # Replace multiple white space characters with only one
     body = ' '.join(body.split())
