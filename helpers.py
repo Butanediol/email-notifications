@@ -1,6 +1,7 @@
 from email.message import Message
 from email.header import decode_header
 from bs4 import BeautifulSoup
+import quopri
 
 
 def getEmailBody(message: Message, trimmed: bool = True) -> str:
@@ -11,7 +12,11 @@ def getEmailBody(message: Message, trimmed: bool = True) -> str:
             body += part.get_payload(decode=True).decode() + '\n'
             break
         elif part.get_content_type() == 'text/html':
-            body += BeautifulSoup(part.get_payload(), 'html.parser').text
+            try:
+                html = quopri.decodestring(part.get_payload()).decode()
+            except Exception as e:
+                html = part.get_payload()
+            body += BeautifulSoup(html, 'html.parser').text
 
     # Replace multiple white space characters with only one
     body = ' '.join(body.split())
