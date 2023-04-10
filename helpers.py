@@ -2,14 +2,16 @@ from email.message import Message
 from email.header import decode_header
 from bs4 import BeautifulSoup
 import quopri
+from typing import Union
 
 
-def getEmailBody(message: Message, trimmed: bool = True) -> str:
+def getEmailBody(message: Message) -> str:
     # Get body
     body = ''
     for part in message.walk():
+        charset = part.get_content_charset() or 'utf-8'
         if part.get_content_type() == 'text/plain':
-            body += part.get_payload(decode=True).decode() + '\n'
+            body += part.get_payload(decode=True).decode(charset) + '\n'
             break
         elif part.get_content_type() == 'text/html':
             try:
@@ -26,7 +28,11 @@ def getEmailBody(message: Message, trimmed: bool = True) -> str:
         body = body[:1000] + '...'
     return body
 
-def decodeMailSubject(subject: str) -> str:
+def decodeMailSubject(subject: Union[str, None]) -> str:
+
+    if subject is None:
+        return 'Empty subject'
+
     try:
         subjects = [subj[0].decode(subj[1]) for subj in decode_header(subject)]
         return ' '.join(subjects)
