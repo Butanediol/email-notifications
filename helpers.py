@@ -34,7 +34,7 @@ def decodeMailSubject(subject: Union[str, None]) -> str:
         return 'Empty subject'
 
     try:
-        subjects = [subj[0].decode(subj[1]) for subj in decode_header(subject)]
+        subjects = [subj[0].decode(subj[1] or 'utf-8') for subj in decode_header(subject)]
         return ' '.join(subjects)
     except AttributeError:
         return subject
