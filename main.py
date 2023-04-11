@@ -1,5 +1,4 @@
 import mailbot
-import helpers
 import time
 import os
 import logging

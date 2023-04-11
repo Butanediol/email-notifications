@@ -15,8 +15,8 @@ def replace_consecutive_newlines(text: str) -> str:
         str: The modified text string with three or more consecutive newlines replaced by two newlines.
     """
 
-    while '\n\n\n' in text:
-        text = text.replace('\n\n\n', '\n\n')
+    while '\n\n' in text:
+        text = text.replace('\n\n', '\n')
     return text
 
 def remove_leading_spaces(text):
@@ -105,3 +105,15 @@ def extract_email_address(address: str) -> str:
     except IndexError:
         sender_email = address
     return sender_email
+
+def extract_email_attachment(message: Message) -> list[tuple[str, bytes]]:
+    attachments: list[tuple[str, bytes]] = []
+
+    # But only get attachment less than 50MB
+    for part in message.walk():
+        if part.get_content_disposition() == 'attachment':
+            filename = part.get_filename('Untitled attachment')
+            file = part.get_payload(decode=True)
+            attachments.append((filename, file))
+
+    return attachments
