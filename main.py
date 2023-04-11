@@ -2,6 +2,10 @@ import mailbot
 import helpers
 import time
 import os
+import logging
+
+from Senders.telegram_sender import TelegramSender
+from Senders.bark_sender import BarkSender
 
 chatId = os.environ['TELEGRAM_CHAT_ID']
 tgApiToken = os.environ['TELEGRAM_BOT_TOKEN']
@@ -11,22 +15,20 @@ mailPassword = os.environ['IMAP_MAIL_PASSWORD']
 mailFolder = os.environ['IMAP_MAIL_FOLDER']
 barkToken = os.environ['BARK_TOKEN']
 
-mailbox = mailbot.Mailbox(mailServer, mailAddress, mailPassword, mailFolder)
-telegram = mailbot.TgSender(tgApiToken, chatId)
-bark = mailbot.BarkSender(token=barkToken)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s \t %(levelname)s \t %(message)s')
 
-print('Start checking..')
+mailbox = mailbot.Mailbox(mailServer, mailAddress, mailPassword, mailFolder)
+
+telegram = TelegramSender(token=tgApiToken, chatId=chatId)
+bark = BarkSender(token=barkToken)
+
+logging.info('Start checking...')
 while (1):
+    logging.debug('Checking...')
     emails = mailbox.getUnseenMails(False)
 
     for email in emails:
-        sender_address = helpers.extract_email_address(email['From'])
-        receiver_address = helpers.extract_email_address(email['To'])
-        body = helpers.extract_email_body(email)
-        subject = helpers.extract_email_subject(email['Subject'])
-
-        data = sender_address + ' -> ' + receiver_address + '\n\n' + subject + '\n\n' + body
-        telegram.send(data)
-        bark.send(title='From: ' + sender_address, content=subject)
+        telegram.send(message=email)
+        bark.send(message=email)
 
     time.sleep(30)

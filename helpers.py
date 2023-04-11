@@ -2,7 +2,6 @@ from email.message import Message
 from email.header import decode_header
 from bs4 import BeautifulSoup
 import quopri
-from typing import Union
 
 
 def replace_consecutive_newlines(text: str) -> str:
@@ -68,18 +67,18 @@ def extract_email_body(message: Message) -> str:
     return body
 
 
-def extract_email_subject(subject: Union[str, None]) -> str:
+def extract_email_subject(message: Message) -> str:
     """
-    Extracts the subject from an email message.
+    Extract the email subject from a given message object.
 
     Args:
-        subject (Union[str, None]): The subject of the email message. If None,
-        returns 'Empty subject'.
+        message (Message): An email message object.
 
     Returns:
-        str: The subject of the email message as a string, or 'Empty subject' if
-        subject is None.
+        str: The extracted email subject. If the message object does not have a subject or the subject cannot be 
+             decoded, returns 'Empty subject' or the original subject string respectively.
     """
+    subject = message['Subject']
     if subject is None:
         return 'Empty subject'
 
