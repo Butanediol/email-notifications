@@ -16,7 +16,7 @@ class BarkSender:
     content = extract_email_subject(message=message)
     title = extract_email_address(message['From'])
     try:
-      response = requests.post(
+      requests.post(
         url=self.__sendMessageUrl,
         headers={
             "Content-Type": "application/json; charset=utf-8",

@@ -1,7 +1,6 @@
 from email.message import Message
 import imaplib
 import email.header
-import logging
 
 # Some Concepts:
 #   Each mail has a unique identifier (UID).
@@ -9,14 +8,13 @@ import logging
 #     to get the UIDs of the mails we want to fetch. (UID SEARCH [UNSEEN \ ALL])
 
 class Mailbox:
-  def __init__(self, mail: str, mailbox: str, password: str, folder: str = 'Inbox', logger: logging.Logger = logging.getLogger('shared')):
+  def __init__(self, mail: str, mailbox: str, password: str, folder: str = 'Inbox'):
     if not mail or not mailbox or not password:
       raise Exception('Each parameter must not be empty') 
     self.mail = mail
     self.mailbox = mailbox
     self.__password = password
     self.folder = folder
-    self.logger = logger
     self.__login()
     
   def __login(self):
