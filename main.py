@@ -14,7 +14,7 @@ mailPassword = os.environ['IMAP_MAIL_PASSWORD']
 mailFolder = os.environ['IMAP_MAIL_FOLDER']
 barkToken = os.environ['BARK_TOKEN']
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s \t %(levelname)s \t %(message)s')
+logging.basicConfig(level=os.environ.get('LOG_LEVEL', 'INFO').upper(), format='%(asctime)s \t %(levelname)s \t %(message)s')
 
 mailbox = mailbot.Mailbox(mailServer, mailAddress, mailPassword, mailFolder)
 
