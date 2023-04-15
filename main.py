@@ -24,7 +24,9 @@ bark = BarkSender(token=barkToken)
 logging.info('Start checking...')
 while (1):
     logging.debug('Checking...')
-    emails = mailbox.getUnseenMails(False)
+    emails = mailbox.getUnseenMails()
+    if emails.__len__() != 0:
+        logging.debug('Found %d emails' % emails.__len__())
 
     for email in emails:
         telegram.send(message=email)

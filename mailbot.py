@@ -1,6 +1,7 @@
 from email.message import Message
 import imaplib
 import email.header
+import logging
 
 # Some Concepts:
 #   Each mail has a unique identifier (UID).
@@ -25,23 +26,21 @@ class Mailbox:
     try:
       self.__imap = imaplib.IMAP4_SSL(self.mail)
       self.__imap.login(self.mailbox, self.__password)
-      uids = self.__getUnseenUids()
+      uids = self.__get_uids()
 
       # Last UID is the UID with the highest value. 
       self.__lastUid = max(uids) if len(uids) > 0 else -1
     except:
       raise Exception('Access denied. Check the data or the server permissions.')
     
-  def getUnseenMails(self, allUnread: bool = False) -> list[Message]:
+  def getUnseenMails(self) -> list[Message]:
     """
     Get unseen mails.
 
     :param allUnread: If true, get all unread mails. Otherwise, get only unread mails after the last UID.
     """
-    uids = self.__getUnseenUids()
-
-    if not allUnread:
-      uids = [uid for uid in uids if uid > self.__lastUid]
+    uids = [uid for uid in self.__get_uids() if uid > self.__lastUid]
+    logging.debug('Unseen UIDs: ' + str(uids))
 
     if len(uids) == 0:
       return []
@@ -61,17 +60,18 @@ class Mailbox:
     
     return mails
 
-  def __getUnseenUids(self) -> list[int]:
+  def __get_uids(self) -> list[int]:
     """
-      Get unseen mail uids.
+      Get mail uids.
     """
     try:
       self.__imap.select(self.folder)
 
-      # Get all unseen mail UIDs.
+      # Get all mail UIDs.
       _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
     except:
       return []
     else:
+      logging.debug('All UIDs: ' + str(uids))
       return list(uids)
