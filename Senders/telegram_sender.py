@@ -15,6 +15,7 @@ class TelegramSender:
     self.__bot = TeleBot(token=token)
     self.__chatId = chatId
 
+  @retry(max_tries=20)
   def send(self, message: Message):
     text = """
     {sender} -> {to}

@@ -11,7 +11,8 @@ class BarkSender:
       raise Exception('Missing Bark token.')
     self.__deviceToken = token
     self.__sendMessageUrl = baseUrl + '/' + token
-    
+
+  @retry(max_tries=20)
   def send(self, message: Message):
     content = extract_email_subject(message=message)
     title = extract_email_address(message['From'])

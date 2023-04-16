@@ -2,6 +2,7 @@ from email.message import Message
 from email.header import decode_header
 from bs4 import BeautifulSoup
 import quopri
+import time
 
 
 def replace_consecutive_newlines(text: str) -> str:
@@ -117,3 +118,19 @@ def extract_email_attachment(message: Message) -> list[tuple[str, bytes]]:
             attachments.append((filename, file))
 
     return attachments
+
+def retry(max_tries=3, expnential_backoff=False):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            delay = 1
+            for _ in range(max_tries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    print(f"Exception caught: {e}")
+                    time.sleep(delay)
+                    if expnential_backoff:
+                      delay *= 2
+            raise Exception("Failed after multiple retries.")
+        return wrapper
+    return decorator
