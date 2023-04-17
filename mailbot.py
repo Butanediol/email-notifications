@@ -1,4 +1,5 @@
 from email.message import Message
+from os import environ
 import imaplib
 import email.header
 import logging
@@ -9,13 +10,11 @@ import logging
 #     to get the UIDs of the mails we want to fetch. (UID SEARCH [UNSEEN \ ALL])
 
 class Mailbox:
-  def __init__(self, mail: str, mailbox: str, password: str, folder: str = 'Inbox'):
-    if not mail or not mailbox or not password:
-      raise Exception('Each parameter must not be empty') 
-    self.mail = mail
-    self.mailbox = mailbox
-    self.__password = password
-    self.folder = folder
+  def __init__(self):
+    self.__mail_server = environ['IMAP_MAIL_SERVER']
+    self.__mail_username = environ['IMAP_MAIL_USERNAME']
+    self.__mail_password = environ['IMAP_MAIL_PASSWORD']
+    self.__mail_folder = environ.get('IMAP_MAIL_FOLDER', 'INBOX')
     self.__login()
     
   def __login(self):
@@ -24,8 +23,8 @@ class Mailbox:
       Set last mail UID to the highest mail UID.
     """
     try:
-      self.__imap = imaplib.IMAP4_SSL(self.mail)
-      self.__imap.login(self.mailbox, self.__password)
+      self.__imap = imaplib.IMAP4_SSL(self.__mail_server)
+      self.__imap.login(self.__mail_username, self.__mail_password)
       uids = self.__get_uids()
 
       # Last UID is the UID with the highest value. 
@@ -65,12 +64,13 @@ class Mailbox:
       Get mail uids.
     """
     try:
-      self.__imap.select(self.folder)
+      self.__imap.select(self.__mail_folder)
 
       # Get all mail UIDs.
       _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
-    except:
+    except Exception as e:
+      logging.error(e)
       return []
     else:
       logging.debug('All UIDs: ' + str(uids))

@@ -1,16 +1,21 @@
 from email.message import Message
 from helpers import *
+from os import environ
 import requests
 import json
 import logging
 
+# Gmail https://img.butanediol.me/51/a9c92d6ec0446833c947e722628d0585f7e34d.png
+# iCloud https://img.butanediol.me/40/0ef6043445bc21886531ffce6ed97a8da8c143.png
+
 class BarkSender:
 
-  def __init__(self, token, baseUrl="https://api.day.app"):
-    if not token:
-      raise Exception('Missing Bark token.')
-    self.__deviceToken = token
-    self.__sendMessageUrl = baseUrl + '/' + token
+  def __init__(self):
+    self.__bark_token = environ['BARK_TOKEN']
+    self.__bark_server = environ.get('BARK_SERVER', 'https://api.day.app')
+    self.__bark_group = environ.get('BARK_GROUP', 'Email')
+    self.__bark_icon = environ.get('BARK_ICON', 'https://img.butanediol.me/99/f651c5840b88226f6aa5b9cd6398e85deed6e6.png')
+    self.__sendMessageUrl = self.__bark_server + '/' + self.__bark_token
 
   @retry(max_tries=20)
   def send(self, message: Message):
@@ -24,9 +29,9 @@ class BarkSender:
         },
         data=json.dumps({
             "body": content,
-            "group": "Email",
+            "group": self.__bark_group,
             "title": title,
-            "badge": ""
+            "icon": self.__bark_icon,
         }),
         )
       logging.info('Bark: {title} - {content}'.format(title=title, content=content))

@@ -66,11 +66,14 @@ See `.env.example` for an example.
 
 ### Bark Settings (optional)
 - `BARK_TOKEN`
+- `BARK_SERVER` (optional)
+- `BARK_ICON` (optional)
+- `BARK_GROUP` (optional)
 
 1. Install [Bark](https://apps.apple.com/us/app/bark-customed-notifications/id1403753865) on your iPhone/iPad.
 2. Open the app and click the "Register" button.
 3. Tap the cloud icon on the top right corner. Tap the server you want to use. Copy address and key.
-4. Set variable `BARK_TOKEN` to key. (Set address is currently not supported. But it's easy to modify the script tho.)
+4. Set variable `BARK_TOKEN` to key, and optionally `BARK_SERVER` to server.
 
 ## Run
 
