@@ -70,11 +70,11 @@ class Mailbox:
       _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
     except AttributeError as e:
-      logging.error('Error while checking new emails: ', e)
+      logging.error(f'Error while checking new emails: {e}')
       logging.warning('This could because the folder is empty. If so, ignore this warning.')
       return []
     except Exception as e:
-      logging.error('Error while checking new emails: ', e)
+      logging.error(f'Error while checking new emails: {e}')
       logging.error('Re-login and try again.')
       self.__login()
       return []
