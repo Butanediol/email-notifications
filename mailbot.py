@@ -30,7 +30,8 @@ class Mailbox:
       # Last UID is the UID with the highest value. 
       self.__lastUid = max(uids) if len(uids) > 0 else -1
     except:
-      raise Exception('Access denied. Check the data or the server permissions.')
+      logging.critical('Access denied. Check the data or the server permissions.')
+      exit(1)
     
   def getUnseenMails(self) -> list[Message]:
     """
