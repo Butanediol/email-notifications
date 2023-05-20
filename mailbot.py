@@ -15,6 +15,7 @@ class Mailbox:
     self.__mail_username = environ['IMAP_MAIL_USERNAME']
     self.__mail_password = environ['IMAP_MAIL_PASSWORD']
     self.__mail_folder = environ.get('IMAP_MAIL_FOLDER', 'INBOX')
+    self.__mail_remains_unread = environ.get('IMAP_MAIL_REMAINS_UNREAD', 'true').lower() == 'true'
     self.__login()
     
   def __login(self):
@@ -36,8 +37,6 @@ class Mailbox:
   def getUnseenMails(self) -> list[Message]:
     """
     Get unseen mails.
-
-    :param allUnread: If true, get all unread mails. Otherwise, get only unread mails after the last UID.
     """
     uids = [uid for uid in self.__get_uids() if uid > self.__lastUid]
     logging.debug('Unseen UIDs: ' + str(uids))
@@ -50,6 +49,7 @@ class Mailbox:
       try:
         _, body = self.__imap.uid('fetch', str(uid), 'BODY[]')
         message = email.message_from_bytes(body[0][1])
+        if self.__mail_remains_unread: self.__mark_as_unread(uid)
       except:
         continue
       else:
@@ -71,14 +71,19 @@ class Mailbox:
       _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
     except AttributeError as e:
-      logging.error(f'Error while checking new emails: {e}')
-      logging.warning('This could because the folder is empty. If so, ignore this warning.')
+      logging.warning(f'Error while checking new emails: {e} \t Check out GitHub Wiki.')
       return []
     except Exception as e:
-      logging.error(f'Error while checking new emails: {e}')
-      logging.error('Re-login and try again.')
+      logging.error(f'Error while checking new emails: {e} \t Re-login and try again.')
       self.__login()
       return []
     else:
       logging.debug('All UIDs: ' + str(uids))
       return list(uids)
+
+  def __mark_as_unread(self, uid: int):
+    """
+      Mark mail as unread.
+    """
+    logging.info(f'Mark mail {uid} as unread.')
+    self.__imap.uid('STORE', str(uid), '-FLAGS', '\\SEEN')
