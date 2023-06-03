@@ -1,6 +1,8 @@
 from telebot import TeleBot
 from email.message import Message
-from helpers import *
+from helpers.misc import retry
+from helpers.messages import *
+from helpers.strings import *
 from os import environ
 import io
 import logging
@@ -25,8 +27,8 @@ class TelegramSender:
       subject=extract_email_subject(message),
       body=get_email_summary(message)
     )
-    text = replace_consecutive_newlines(text)
-    text = remove_leading_spaces(text)
+    text = remove_excessive_newlines(text)
+    text = strip_leading_and_trailing_spaces(text)
     self.__bot.send_message(chat_id=self.__chat_id, text=text, disable_web_page_preview=True)
     logging.info('Telegram: {sender} -> {to}'.format(sender=extract_email_address(message['From']), to=extract_email_address(message['To'])))
     for filename, file in extract_email_attachment(message):

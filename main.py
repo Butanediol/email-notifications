@@ -14,7 +14,7 @@ mailbox = Mailbox()
 telegram = TelegramSender()
 bark = BarkSender()
 
-# Sleep random time to avoid multiple instances running at the same time.
+logging.info('Sleep random time to avoid multiple instances running at the same time.')
 time.sleep(randint(0, interval))
 
 logging.info('Start checking...')
