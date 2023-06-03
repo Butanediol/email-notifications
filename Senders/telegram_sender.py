@@ -23,7 +23,7 @@ class TelegramSender:
       sender=extract_email_address(message['From']),
       to=extract_email_address(message['To']),
       subject=extract_email_subject(message),
-      body=extract_email_body(message)
+      body=get_email_summary(message)
     )
     text = replace_consecutive_newlines(text)
     text = remove_leading_spaces(text)

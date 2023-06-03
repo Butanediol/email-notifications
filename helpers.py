@@ -1,7 +1,6 @@
 from email.message import Message
 from email.header import decode_header
 from bs4 import BeautifulSoup
-import quopri
 import time
 import logging
 
@@ -36,7 +35,36 @@ def remove_leading_spaces(text):
     lines[i] = lines[i].strip()
   return '\n'.join(lines)
 
-def extract_email_body(message: Message) -> str:
+def extract_summary_from_plaintext(message: Message) -> str | None:
+  """
+  Extracts the email summary from a given message object.
+  """
+
+  summary = ''
+
+  for part in message.walk():
+    if part.get_content_type() == 'text/plain':
+      charset = part.get_content_charset() or 'utf-8'
+      summary += part.get_payload(decode=True).decode(charset)
+
+  return summary == '' and None or summary
+
+def extract_summary_from_html(message: Message) -> str | None:
+  """
+  Extracts the plaintext HTML content from a given message object.
+  """
+
+  summary = ''
+
+  for part in message.walk():
+    if part.get_content_type() == 'text/html':
+      charset = part.get_content_charset() or 'utf-8'
+      html = part.get_payload(decode=True).decode(charset)
+      summary += BeautifulSoup(html, 'html.parser').text
+
+  return summary == '' and None or summary
+
+def get_email_summary(message: Message) -> str:
   """
   Retrieve email body from a Message object and return it as a string.
 
@@ -46,27 +74,16 @@ def extract_email_body(message: Message) -> str:
   Returns:
     str: The retrieved email body as a string.
   """
-  # Get body
-  body = ''
-  for part in message.walk():
-    charset = part.get_content_charset() or 'utf-8'
-    if part.get_content_type() == 'text/plain':
-      body += part.get_payload(decode=True).decode(charset) + '\n'
-      break
-    elif part.get_content_type() == 'text/html':
-      try:
-        html = quopri.decodestring(part.get_payload()).decode()
-      except Exception as _:
-        html = part.get_payload()
-      body += BeautifulSoup(html, 'html.parser').text
+  # Get summary
+  summary = extract_summary_from_plaintext(message=message) or extract_summary_from_html(message=message) or ''
+  summary = replace_consecutive_newlines(summary)
+  summary = remove_leading_spaces(summary)
 
-  body = replace_consecutive_newlines(body)
-  body = remove_leading_spaces(body)
 
-  # Trim body if too long
-  if len(body) > 1000:
-    body = body[:1000] + '...'
-  return body
+  # Trim summary if too long
+  if len(summary) > 4096:
+    summary = summary[:4093] + '...'
+  return summary
 
 
 def extract_email_subject(message: Message) -> str:
