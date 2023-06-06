@@ -35,6 +35,6 @@ class BarkSender:
             "icon": self.__bark_icon,
         }),
         )
-      logging.info('Bark: {title} - {content}'.format(title=title, content=content))
+      logging.info(f'Bark: {title}')
     except requests.exceptions.RequestException:
       logging.error('HTTP Request failed')

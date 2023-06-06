@@ -71,7 +71,7 @@ class Mailbox:
       _, uids = self.__imap.uid('SEARCH', "ALL")
       uids = [int(uid) for uid in uids[0].split()]
     except AttributeError as e:
-      logging.warning(f'Error while checking new emails: {e} \t Check out GitHub Wiki.')
+      logging.debug(f'Error while checking new emails: {e} \t Check out GitHub Wiki.')
       return []
     except Exception as e:
       logging.error(f'Error while checking new emails: {e} \t Re-login and try again.')

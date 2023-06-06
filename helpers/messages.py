@@ -34,7 +34,7 @@ def extract_summary_from_html(message: Message) -> str | None:
       h.use_automatic_links = True
       summary += h.handle(data=html)
 
-  return summary == '' and None or summary
+  return summary.strip() == '' and None or summary
 
 def get_email_summary(message: Message) -> str:
   """
