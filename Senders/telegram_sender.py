@@ -29,6 +29,7 @@ class TelegramSender:
     )
     text = remove_excessive_newlines(text)
     text = strip_leading_and_trailing_spaces(text)
+    text = truncate_string(text)
     self.__bot.send_message(chat_id=self.__chat_id, text=text, disable_web_page_preview=True)
     logging.info('Telegram: {sender} -> {to}'.format(sender=extract_email_address(message['From']), to=extract_email_address(message['To'])))
     for filename, file in extract_email_attachment(message):

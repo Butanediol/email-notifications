@@ -50,10 +50,6 @@ def get_email_summary(message: Message) -> str:
   summary = extract_summary_from_plaintext(message=message) or extract_summary_from_html(message=message) or ''
   summary = compact_string(summary)
 
-
-  # Trim summary if too long
-  if len(summary) > 4096:
-    summary = summary[:4093] + '...'
   return summary
 
 def extract_email_subject(message: Message) -> str:

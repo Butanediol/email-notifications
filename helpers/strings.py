@@ -1,7 +1,5 @@
 from email.header import decode_header
-from typing import Optional
 import logging
-import re
 
 def compact_string(text: str) -> str:
   """
@@ -86,3 +84,19 @@ def extract_email_address(address: str) -> str:
   except IndexError:
     sender_email = address
   return sender_email
+
+def truncate_string(text: str, max_length: int = 3996) -> str:
+  """
+  Truncate a given string to a maximum length.
+
+  Args:
+    text (str): The string to truncate.
+    max_length (int): The maximum length of the truncated string.
+
+  Returns:
+    str: The truncated string.
+  """
+  if len(text) > max_length:
+    return text[:max_length] + '...'
+  else:
+    return text
