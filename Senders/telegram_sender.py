@@ -30,7 +30,15 @@ class TelegramSender:
     text = remove_excessive_newlines(text)
     text = strip_leading_and_trailing_spaces(text)
     text = truncate_string(text)
-    self.__bot.send_message(chat_id=self.__chat_id, text=text, disable_web_page_preview=True)
+
+    # Try to send message with markdown enabled
+    try:
+      self.__bot.send_message(chat_id=self.__chat_id, text=text, parse_mode='Markdown', disable_web_page_preview=True)
+    except Exception as e:
+      self.__bot.send_message(chat_id=self.__chat_id, text=text, disable_web_page_preview=True)
+      logging.error(f'{e}')
+    
+
     logging.info('Telegram: {sender} -> {to}'.format(sender=extract_email_address(message['From']), to=extract_email_address(message['To'])))
     for filename, file in extract_email_attachment(message):
       bytes_io = io.BytesIO(file)
