@@ -49,11 +49,10 @@ class Mailbox:
       try:
         _, body = self.__imap.uid('fetch', str(uid), 'BODY[]')
         message = email.message_from_bytes(body[0][1])
+        mails.append(message)
         if self.__mail_remains_unread: self.__mark_as_unread(uid)
       except:
         continue
-      else:
-        mails.append(message)
     
     if len(uids) > 0:
       self.__lastUid = max(uids)
@@ -86,4 +85,7 @@ class Mailbox:
       Mark mail as unread.
     """
     logging.info(f'Mark mail {uid} as unread.')
-    self.__imap.uid('STORE', str(uid), '-FLAGS', '\\SEEN')
+    try:
+      self.__imap.uid('STORE', str(uid), '-FLAGS', '(\\SEEN)')
+    except Exception as e:
+      logging.error(f'Error while marking mail {uid} as unread: {e}')
