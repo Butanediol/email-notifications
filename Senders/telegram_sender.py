@@ -1,12 +1,21 @@
 from telebot import TeleBot
 from email.message import Message
 from helpers.misc import retry
-from helpers.messages import *
-from helpers.strings import *
+from helpers.messages import extract_email_attachment, extract_email_subject, get_email_summary
+from helpers.strings import extract_email_address, truncate_string
 from Senders.base import BaseSender
 from os import environ
 import io
 import logging
+import re
+
+# Characters that must be escaped in MarkdownV2 (outside code blocks)
+_MARKDOWN_V2_SPECIAL = r'_*[]()~`>#+-=|{}.!\\'
+
+
+def escape_markdown_v2(text: str) -> str:
+  """Escape special characters for Telegram MarkdownV2 format."""
+  return re.sub(r'([_*\[\]()~`>#+=|{}.!\\-])', r'\\\1', text)
 
 
 class TelegramSender(BaseSender):
@@ -17,36 +26,37 @@ class TelegramSender(BaseSender):
 
   def __init__(self):
     self.__chat_id = environ['TELEGRAM_CHAT_ID']
-    self.__tg_bot_token = environ['TELEGRAM_BOT_TOKEN']
-    self.__bot = TeleBot(token=self.__tg_bot_token)
+    self.__bot = TeleBot(token=environ['TELEGRAM_BOT_TOKEN'])
+
+  def _format_message(self, message: Message) -> tuple[str, str, str, str]:
+    """Extract and return (sender, to, subject, body) from email."""
+    sender = extract_email_address(message['From'])
+    to = extract_email_address(message['To'])
+    subject = extract_email_subject(message)
+    body = get_email_summary(message)
+    return sender, to, subject, body
 
   @retry(max_tries=20)
   def send(self, message: Message):
-    text = """
-    {sender} -> {to}
-    {subject}
-    {body}
-    """.format(
-      sender=extract_email_address(message['From']),
-      to=extract_email_address(message['To']),
-      subject=extract_email_subject(message),
-      body=get_email_summary(message)
+    sender, to, subject, body = self._format_message(message)
+
+    text = (
+      f'*{escape_markdown_v2(sender)}* → *{escape_markdown_v2(to)}*\n'
+      f'*{escape_markdown_v2(subject)}*\n\n'
+      f'{escape_markdown_v2(body)}'
     )
-    text = remove_excessive_newlines(text)
-    text = strip_leading_and_trailing_spaces(text)
     text = truncate_string(text)
 
-    # Try to send message with markdown enabled
-    try:
-      self.__bot.send_message(chat_id=self.__chat_id, text=text, parse_mode='Markdown', disable_web_page_preview=True)
-    except Exception as e:
-      self.__bot.send_message(chat_id=self.__chat_id, text=text, disable_web_page_preview=True)
-      logging.error(f'{e}')
-    
+    self.__bot.send_message(
+      chat_id=self.__chat_id,
+      text=text,
+      parse_mode='MarkdownV2',
+      disable_web_page_preview=True
+    )
+    logging.info(f'Telegram: {sender} -> {to}')
 
-    logging.info('Telegram: {sender} -> {to}'.format(sender=extract_email_address(message['From']), to=extract_email_address(message['To'])))
     for filename, file in extract_email_attachment(message):
       bytes_io = io.BytesIO(file)
       bytes_io.name = filename
       self.__bot.send_document(chat_id=self.__chat_id, document=bytes_io)
-      logging.info('Telegram: {filename}'.format(filename=filename))
+      logging.info(f'Telegram attachment: {filename}')
