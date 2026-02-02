@@ -2,12 +2,15 @@ from telebot import TeleBot
 from email.message import Message
 from helpers.misc import retry
 from helpers.messages import extract_email_attachment, extract_email_subject, get_email_summary
-from helpers.strings import extract_email_address, truncate_string
+from helpers.strings import extract_email_address
 from Senders.base import BaseSender
 from os import environ
 import io
 import logging
 import re
+
+# Telegram message limit
+_MAX_MESSAGE_LENGTH = 4096
 
 # Characters that must be escaped in MarkdownV2 (outside code blocks)
 _MARKDOWN_V2_SPECIAL = r'_*[]()~`>#+-=|{}.!\\'
@@ -45,7 +48,8 @@ class TelegramSender(BaseSender):
       f'*{escape_markdown_v2(subject)}*\n\n'
       f'{escape_markdown_v2(body)}'
     )
-    text = truncate_string(text)
+    if len(text) > _MAX_MESSAGE_LENGTH:
+      text = text[:_MAX_MESSAGE_LENGTH - 6] + '\\.\\.\\.'
 
     self.__bot.send_message(
       chat_id=self.__chat_id,
