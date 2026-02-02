@@ -1,6 +1,9 @@
 import imaplib
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 mailServer = os.environ['IMAP_MAIL_SERVER']
 mailAddress = os.environ['IMAP_MAIL_USERNAME']
 mailPassword = os.environ['IMAP_MAIL_PASSWORD']

@@ -1,0 +1,16 @@
+[project]
+name = "email-notifications"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "certifi==2023.5.7",
+    "charset-normalizer==3.1.0",
+    "html2text==2020.1.16",
+    "idna==3.4",
+    "python-dotenv>=1.0.0",
+    "pytelegrambotapi==4.12.0",
+    "requests==2.31.0",
+    "urllib3==2.0.2",
+]

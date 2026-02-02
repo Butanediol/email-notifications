@@ -3,13 +3,18 @@ from email.message import Message
 from helpers.misc import retry
 from helpers.messages import *
 from helpers.strings import *
+from Senders.base import BaseSender
 from os import environ
 import io
 import logging
 
 
-class TelegramSender:
-  
+class TelegramSender(BaseSender):
+
+  @classmethod
+  def enabled(cls) -> bool:
+    return 'TELEGRAM_CHAT_ID' in environ and 'TELEGRAM_BOT_TOKEN' in environ
+
   def __init__(self):
     self.__chat_id = environ['TELEGRAM_CHAT_ID']
     self.__tg_bot_token = environ['TELEGRAM_BOT_TOKEN']
