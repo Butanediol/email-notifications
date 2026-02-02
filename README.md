@@ -2,8 +2,12 @@
 
 Sometimes mail client notifications don't work very well. There is a script that checks the mailbox and sends notifications of new email messages via other services.
 
+## Supported Senders
+
 - Telegram
 - Bark for iOS
+
+Senders are implemented as plugins and are automatically discovered and enabled based on your configuration.
 
 ## Configuration
 
@@ -11,82 +15,140 @@ This bot reads config from environment variables.
 
 See `.env.example` for an example.
 
-> By 'optional', I mean you still have to fill in the variable, just use some fake data.
+Senders are **automatically enabled** when their required environment variables are set. You only need to configure the senders you want to use.
+
+### General Settings
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `INTERVAL` | No | `30` | Check interval in seconds |
+| `LOG_LEVEL` | No | `INFO` | Logging level (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
 
 ### IMAP Settings (required)
-- `IMAP_MAIL_SERVER`
 
-	IMAP server address, typically looks like `imap.gmail.com` or `imap.mail.me.com`.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `IMAP_MAIL_SERVER` | Yes | IMAP server address (e.g., `imap.gmail.com`, `imap.mail.me.com`) |
+| `IMAP_MAIL_USERNAME` | Yes | IMAP username (typically `user@example.com`, sometimes just `user`) |
+| `IMAP_MAIL_PASSWORD` | Yes | Account password (some services require an app-specific password) |
+| `IMAP_MAIL_FOLDER` | No | Folder to check (default: `INBOX`) |
 
-- `IMAP_MAIL_USERNAME`
+> Note: IMAP username may differ from the address others see when you send emails. For example, iCloud custom domain email users should use their original iCloud email address.
 
-	IMAP username, typically it looks like `user@example.com`, but sometimes it can be without @ (at) and domain like just `user`.
+To list available folders:
+```bash
+python tools/list_folders.py
+```
 
-	Also note that, this user name may differ from the address that others can see when you send emails. For example, if you use iCloud custom domain email, your IMAP username is your original iCloud email address, not the custom domain email address.
+### Telegram Settings
 
-- `IMAP_MAIL_PASSWORD`
+**Required variables:** `TELEGRAM_CHAT_ID`, `TELEGRAM_BOT_TOKEN`
 
-	Password of the account. Some services require you to create an app specific password.
+When both are set, the Telegram sender is automatically enabled.
 
-- `IMAP_MAIL_FOLDER`
+<details>
+<summary>Setup instructions</summary>
 
-	IMAP folder to check for new emails. Defaults to `INBOX`.
+1. Find [@BotFather](https://t.me/botfather) in Telegram
+2. Create a bot and copy the API token → set as `TELEGRAM_BOT_TOKEN`
+3. Get your chat ID:
+   - For personal notifications: send a message to your bot
+   - For group notifications: add the bot to a group and send a message
+4. Visit `https://api.telegram.org/bot<token>/getUpdates` to find the chat ID
+5. Set `TELEGRAM_CHAT_ID` (group IDs are negative numbers)
 
-	You can list all folders with `python3 tools/list_folders.py`. The output will looks like this:
-	```
-	(\HasNoChildren) "/" "INBOX"
-	(\HasChildren \Noselect) "/" "[Gmail]"
-	(\HasNoChildren) "/" "&i6KWBQ-/AppTracker"
-	...
-	```
-	You only need the last part of the folder name.
-	In this case you set `IMAP_MAIL_FOLDER` to one of the following:
-	```
-	"INBOX"
-	"[Gmail]"
-	"&i6KWBQ-/AppTracker"
-	```
+> Tip: When creating a group, add a second administrator immediately to prevent the group ID from changing when it becomes a supergroup.
 
-### Telegram Settings (optional)
-- `TELEGRAM_CHAT_ID`
-- `TELEGRAM_BOT_TOKEN`
+</details>
 
-1. Find https://t.me/botfather bot in Telegram
-2. Get API Token of the bot and set an environment variable `TELEGRAM_BOT_TOKEN`.
-3. Get updates of the bot via the next link `https://api.telegram.org/bot<token>/getUpdates`. It will be empty, but `{ ok: true }`
+### Bark Settings (iOS)
 
-4. You need to get chatId of the chat which the bot will send notifications. If you have a team I recommend using a group because it's easy to manage notification recipients simply by managing group members
+**Required variables:** `BARK_TOKEN`
 
->  - If you want to use bot with a group you should create a group with the bot. I noticed that when you add a second administrator to the group, *your group becomes a supergroup and changes Id*. I recommend adding a second administrator at once (this may be the bot itself). When the group is created, the bot is added and you have two or more administrators, for the next step you should write something to the group
->  - If you want to get notifications in personal chat with the bot you should write to bot directly
+When set, the Bark sender is automatically enabled.
 
-5. Get updates of the bot via the link `https://api.telegram.org/bot<token>/getUpdates` again. You can see your message with chat Id in the response. The group chat Id must be a negative number. If there is empty, you can write something to the group or remove the bot from the group and add it, then check the link again
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `BARK_TOKEN` | Yes | - | Your Bark device key |
+| `BARK_SERVER` | No | `https://api.day.app` | Bark server URL |
+| `BARK_GROUP` | No | `Email` | Notification group name |
+| `BARK_ICON` | No | (default icon) | Custom notification icon URL |
 
-6. Set the environment variable `TELEGRAM_CHAT_ID` with chat Id you get from the previous step
+<details>
+<summary>Setup instructions</summary>
 
-### Bark Settings (optional)
-- `BARK_TOKEN`
-- `BARK_SERVER` (optional)
-- `BARK_ICON` (optional)
-- `BARK_GROUP` (optional)
+1. Install [Bark](https://apps.apple.com/us/app/bark-customed-notifications/id1403753865) on your iPhone/iPad
+2. Open the app and register the device
+3. Tap the cloud icon → select a server → copy the key
+4. Set `BARK_TOKEN` to the key
 
-1. Install [Bark](https://apps.apple.com/us/app/bark-customed-notifications/id1403753865) on your iPhone/iPad.
-2. Open the app and click the "Register" button.
-3. Tap the cloud icon on the top right corner. Tap the server you want to use. Copy address and key.
-4. Set variable `BARK_TOKEN` to key, and optionally `BARK_SERVER` to server.
+</details>
 
-## Run
+## Usage
 
-- Run script for testing `python3 main.py`. Send some mails to your mailbox.
+### Running directly
 
-- Run script in background `python3 main.py &`.
+```bash
+# Install dependencies
+pip install -r requirements.txt
 
-- You can also use Docker to run the script. It's dead simple. Just pass all the environment variables to the container.
-	
+# Run the script
+python main.py
+```
+
+### Running with Docker
+
+```bash
+docker run -d \
+  -e IMAP_MAIL_SERVER=imap.gmail.com \
+  -e IMAP_MAIL_USERNAME=you@gmail.com \
+  -e IMAP_MAIL_PASSWORD=your-app-password \
+  -e TELEGRAM_BOT_TOKEN=your-token \
+  -e TELEGRAM_CHAT_ID=your-chat-id \
+  ghcr.io/butanediol/email-notifications
+```
+
+### Testing your configuration
+
+Test that your senders are working without needing real emails:
+
+```bash
+python tools/test_sender.py
+
+# With custom message
+python tools/test_sender.py --from "alice@example.com" --to "bob@example.com" --subject "Hello" --body "Test body"
+```
+
+## Creating Custom Senders
+
+Senders are plugins that are automatically discovered. To create a new sender:
+
+1. Create a new file in the `Senders/` directory (e.g., `Senders/my_sender.py`)
+2. Implement a class that extends `BaseSender`:
+
+```python
+from Senders.base import BaseSender
+from email.message import Message
+from os import environ
+
+class MySender(BaseSender):
+
+    @classmethod
+    def enabled(cls) -> bool:
+        # Return True when required env vars are set
+        return 'MY_SENDER_TOKEN' in environ
+
+    def send(self, message: Message):
+        # Send the notification
+        pass
+```
+
+The sender will be automatically discovered and enabled when `enabled()` returns `True`.
+
 ---
 
-Typical problems
-1. Users in a mail server can be without @ (at) and domain name
-2. If Telegram is blocked in your country and you try to open getUpdates link or run the script on your computer it may not be work
-3. Some services like Gmail block untrusted connections. You should check permissions if the script fails
+## Troubleshooting
 
+1. **Authentication issues**: Some providers (like Gmail) require app-specific passwords
+2. **Telegram blocked**: If Telegram is blocked in your region, the script may fail to send notifications
+3. **No senders enabled**: Check that required environment variables are set. Run `python tools/test_sender.py` to verify
