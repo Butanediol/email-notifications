@@ -13,13 +13,18 @@ import re
 # Telegram message limit
 _MAX_MESSAGE_LENGTH = 4096
 
-# Patterns produced by html2text:
-#   [display text](url)  — named links
-#   <url>                 — automatic links (text == url)
-# Also match bare URLs not already inside markdown syntax.
+# Patterns produced by html2text
 _MARKDOWN_LINK_RE = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
 _ANGLE_LINK_RE = re.compile(r'<(https?://[^>]+)>')
-_BARE_URL_RE = re.compile(r'(?<!\()(https?://[^\s)\]>]+)')
+_BARE_URL_RE = re.compile(r'(?<!\()(https?://[^\s)\]>*\x00]+)')
+_BOLD_RE = re.compile(r'\*\*(.+?)\*\*', re.DOTALL)
+_ITALIC_RE = re.compile(r'(?<![*\w])_(.+?)_(?![*\w])')
+
+# Sentinel character used to mark entity boundaries in intermediate text.
+# All regex substitutions insert sentinel-wrapped tags; a single final scan
+# strips them and extracts entity offsets — no cross-pass offset adjustment.
+_S = '\x00'
+_TAG_RE = re.compile(r'\x00([BE]\d+)\x00')
 
 
 def _utf16_len(text: str) -> int:
@@ -27,114 +32,90 @@ def _utf16_len(text: str) -> int:
   return len(text.encode('utf-16-le')) // 2
 
 
+def _process_body(body: str) -> tuple[str, list[MessageEntity]]:
+  """Replace links and formatting markers in body with Telegram entities.
+
+  Uses sentinel tokens so that all regex passes simply insert markers,
+  and entity offsets are computed in one final scan of the result.
+  """
+  meta: list[tuple[str, str | None]] = []  # indexed by entity id: (type, url)
+
+  def _mark(content: str, etype: str, url: str | None = None) -> str:
+    eid = len(meta)
+    meta.append((etype, url))
+    return f'{_S}B{eid}{_S}{content}{_S}E{eid}{_S}'
+
+  def _md_link(m):
+    display, url = m.group(1), m.group(2)
+    if re.match(r'https?://', display):
+      display = 'Link'
+    return _mark(display, 'text_link', url)
+
+  # Replace links (markdown first, then angle brackets, then bare URLs)
+  text = _MARKDOWN_LINK_RE.sub(_md_link, body)
+  text = _ANGLE_LINK_RE.sub(lambda m: _mark('Link', 'text_link', m.group(1)), text)
+  text = _BARE_URL_RE.sub(lambda m: _mark('Link', 'text_link', m.group(1)), text)
+
+  # Replace formatting markers
+  text = _BOLD_RE.sub(lambda m: _mark(m.group(1), 'bold'), text)
+  text = _ITALIC_RE.sub(lambda m: _mark(m.group(1), 'italic'), text)
+
+  # Single scan: strip sentinel tags, build plain text + entities
+  parts = _TAG_RE.split(text)  # alternates: [text, tag, text, tag, ..., text]
+  result_parts: list[str] = []
+  utf16_pos = 0
+  open_ents: dict[int, int] = {}
+  entities: list[MessageEntity] = []
+
+  for i, part in enumerate(parts):
+    if i % 2 == 0:
+      result_parts.append(part)
+      utf16_pos += _utf16_len(part)
+    else:
+      eid = int(part[1:])
+      if part[0] == 'B':
+        open_ents[eid] = utf16_pos
+      else:
+        start = open_ents.pop(eid)
+        etype, url = meta[eid]
+        entities.append(MessageEntity(
+          type=etype, offset=start, length=utf16_pos - start, url=url
+        ))
+
+  return ''.join(result_parts), entities
+
+
 def _build_message_with_entities(
   sender: str, to: str, subject: str, body: str
 ) -> tuple[str, list[MessageEntity]]:
-  """Build plain text and a list of MessageEntity objects.
+  """Build plain text + entity list for a Telegram message."""
+  processed_body, body_entities = _process_body(body)
 
-  URLs in the body are replaced with short display text and represented
-  as text_link entities, so the full URL does not consume characters in
-  the 4096-char text limit.
-  """
-  entities: list[MessageEntity] = []
-
-  # --- Process body: replace links with display text, collect (offset_in_body, length, url) ---
-  link_entities: list[tuple[int, int, str]] = []  # (offset_in_processed_body, utf16_len, url)
-
-  def _replace_markdown_links(body_text: str) -> str:
-    """Replace [text](url) with just text, recording entities."""
-    result = ''
-    last_end = 0
-    for m in _MARKDOWN_LINK_RE.finditer(body_text):
-      result += body_text[last_end:m.start()]
-      display = m.group(1)
-      url = m.group(2)
-      offset_in_body = _utf16_len(result)
-      length = _utf16_len(display)
-      link_entities.append((offset_in_body, length, url))
-      result += display
-      last_end = m.end()
-    result += body_text[last_end:]
-    return result
-
-  def _replace_angle_links(body_text: str) -> str:
-    """Replace <url> with 'Link', recording entities."""
-    result = ''
-    last_end = 0
-    for m in _ANGLE_LINK_RE.finditer(body_text):
-      result += body_text[last_end:m.start()]
-      url = m.group(1)
-      display = 'Link'
-      offset_in_body = _utf16_len(result)
-      length = _utf16_len(display)
-      link_entities.append((offset_in_body, length, url))
-      result += display
-      last_end = m.end()
-    result += body_text[last_end:]
-    return result
-
-  def _replace_bare_urls(body_text: str) -> str:
-    """Replace bare https?://... URLs with 'Link', recording entities."""
-    result = ''
-    last_end = 0
-    for m in _BARE_URL_RE.finditer(body_text):
-      result += body_text[last_end:m.start()]
-      url = m.group(1)
-      display = 'Link'
-      offset_in_body = _utf16_len(result)
-      length = _utf16_len(display)
-      link_entities.append((offset_in_body, length, url))
-      result += display
-      last_end = m.end()
-    result += body_text[last_end:]
-    return result
-
-  # Process links in order: markdown links first, then angle bracket, then bare URLs
-  processed_body = _replace_markdown_links(body)
-  processed_body = _replace_angle_links(processed_body)
-  processed_body = _replace_bare_urls(processed_body)
-
-  # --- Build the full text with header ---
   header_line1 = f'{sender} → {to}'
   header_line2 = subject
   text = f'{header_line1}\n{header_line2}\n\n{processed_body}'
 
-  # --- Truncate if needed ---
+  # Truncate if needed
   if _utf16_len(text) > _MAX_MESSAGE_LENGTH:
-    # Truncate in a UTF-16 safe way
     ellipsis = '...'
     max_len = _MAX_MESSAGE_LENGTH - _utf16_len(ellipsis)
-    # Trim characters until we fit
     while _utf16_len(text) > max_len:
       text = text[:-1]
     text += ellipsis
 
-  # --- Build entities for bold header ---
-  offset = 0
-  # Bold: sender → to
-  entities.append(MessageEntity(
-    type='bold', offset=offset, length=_utf16_len(header_line1)
-  ))
-  offset += _utf16_len(header_line1) + _utf16_len('\n')  # skip newline
+  # Header bold entities
+  entities: list[MessageEntity] = [
+    MessageEntity(type='bold', offset=0, length=_utf16_len(header_line1)),
+    MessageEntity(type='bold', offset=_utf16_len(header_line1) + 1, length=_utf16_len(header_line2)),
+  ]
 
-  # Bold: subject
-  entities.append(MessageEntity(
-    type='bold', offset=offset, length=_utf16_len(header_line2)
-  ))
-
-  # --- Adjust link entity offsets (they were relative to body, shift by header length) ---
-  header_prefix = f'{header_line1}\n{header_line2}\n\n'
-  header_offset = _utf16_len(header_prefix)
+  # Shift body entities by header length and keep those within bounds
+  header_offset = _utf16_len(f'{header_line1}\n{header_line2}\n\n')
   text_utf16_len = _utf16_len(text)
-
-  for body_offset, length, url in link_entities:
-    abs_offset = header_offset + body_offset
-    # Skip entities that fall beyond the truncated text
-    if abs_offset + length > text_utf16_len:
-      continue
-    entities.append(MessageEntity(
-      type='text_link', offset=abs_offset, length=length, url=url
-    ))
+  for ent in body_entities:
+    ent.offset += header_offset
+    if ent.offset + ent.length <= text_utf16_len:
+      entities.append(ent)
 
   return text, entities
 
